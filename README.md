@@ -80,19 +80,7 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 
 # 🔗 Connect
 
-- **GitHub:** [@your-username](https://github.com/your-username)
-- **LinkedIn:** [Shelley Porter](https://linkedin.com/in/your-linkedin)
-
----
-
-# 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-# 🔼 Quick Preview
-
-[![Project Preview](assets/screenshots/preview-gif.gif)](https://github.com/your-username/your-repo-name)
+- **GitHub:** [@your-username](https://github.com/ShelleyPorter)
+- **LinkedIn:** [Shelley Porter](https://www.linkedin.com/in/lashelleporter/)
 
 ---
