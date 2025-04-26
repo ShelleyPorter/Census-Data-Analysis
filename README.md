@@ -54,9 +54,8 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 
 ---
 
-# 🔗 Connect
+# # 🙌 Connect with Me!
 
-- **GitHub:** [@Shelley Porter](https://github.com/ShelleyPorter)
-- **LinkedIn:** [Shelley Porter](https://www.linkedin.com/in/lashelleporter/)
+🔗 [LinkedIn](https://www.linkedin.com/in/lashelleporter)  |  📧 [shellep@umich.edu](mailto:shellep@umich.edu)  |  🌎 Rockford, MI
 
 ---
