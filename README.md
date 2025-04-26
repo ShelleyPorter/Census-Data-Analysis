@@ -1,6 +1,6 @@
 ## ✨ Overview
 
-This **Census Data Analysis** demonstrates advanced concepts in **R Programming**. It highlights skills in **data cleaning**, **string manipulation**, **statistical summarization**, and **data visualization**. The project was completed entirely using **R**, and the final report was generated as an **HTML** output.
+This [Census Data Analysis](https://github.com/ShelleyPorter/Census-Data-Analysis/blob/main/Final-Project-S-Porter.html) demonstrates advanced concepts in **R Programming**. It highlights skills in **data cleaning**, **string manipulation**, **statistical summarization**, and **data visualization**. The project was built using **R**, and the final report was generated as an **HTML** output.
 
 ---
 
