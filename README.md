@@ -60,7 +60,7 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 ## 📷 Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/string-manipulation.png" alt="String Manipulation Example" width="600"/>
+  <img src="[assets/screenshots/string-manipulation.png](https://github.com/ShelleyPorter/Census-Data-Analysis/blob/main/Screenshot%202025-04-26%20164538.png)" alt="String Manipulation Example" width="600"/>
 </p>
 
 <p align="center">
