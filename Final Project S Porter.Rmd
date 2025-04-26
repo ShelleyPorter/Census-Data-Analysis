@@ -1,0 +1,561 @@
+---
+title: "Final Project"
+author: "Shelley Porter"
+date: "`r Sys.Date()`"
+output: html_document
+#output: flexdashboard::flex_dashboard
+---
+#didn't like output with the flex_board screen formating so I commented out and made it html. I left it in the code so you saw that I did attempt it.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load library
+```{r, warning=FALSE}
+library(naniar)
+library(flextable)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(ggbeeswarm)
+library(skimr)
+library(plotly)
+library(DT)
+library(scales)
+library(boot)
+
+#set theme to bw
+theme_set(theme_bw())
+```
+
+Data import
+```{r}
+# Import data 
+census_data <- read.csv("C:/Users/spsky/OneDrive/UoM/R/Final Project/census_data_county_2009-2021.cvs")
+
+# first few rows of the data
+head(census_data)
+```
+
+Exploratory Data Analysis (EDA)
+```{r}
+# Data skim
+skim(census_data)
+
+# Display data structure
+str(census_data)
+
+# Summary of important variables
+summary(census_data)
+
+# Missing values
+gg_miss_var(census_data)
+```
+
+String Manipulation
+```{r}
+# Manipulate strings in the dataset and append new columns with the changes
+census_data <- census_data |>
+  mutate(
+    new_county_state = str_to_title(county_state),
+    new_county_state = str_replace_all(new_county_state, " County", ""),
+    year = str_trim(as.character(year))
+  )
+
+# Display the first few rows of the updated dataset
+head(census_data)
+```
+
+
+Data Cleaning
+```{r}
+census_data_sample <- census_data|>
+  filter(!is.na(median_income))|>
+  select(new_county_state, year, population, median_income, prop_female, prop_male, prop_poverty, median_monthly_rent_cost, median_monthly_home_cost)
+
+#cleaned and sampled data
+head(census_data_sample)
+```
+
+Summary statistics
+Create a Sample of the Data
+```{r}
+# Sample of around 500 data observations
+census_data_sample <- census_data |> sample_frac(0.012)
+
+# Check the sample size
+nrow(census_data_sample)
+```
+
+Group-level Summary Statistics
+```{r}
+# Summary statistics by new_county_state
+state_summary <- census_data |>
+  group_by(new_county_state) |>
+  summarize(
+    avg_income = round(mean(median_income, na.rm = TRUE), 0),
+    avg_population = round(mean(population, na.rm = TRUE), 0)
+  ) |>
+  rename(
+    `County, State` = new_county_state,
+    `Income` = avg_income,
+    `Population` = avg_population
+  ) |>
+  arrange(`Income`)
+
+# Convert income and population formats
+state_summary <- state_summary |>
+  mutate(
+    Income = dollar(Income),
+    Population = comma(Population)
+  )
+
+# Display the first 50 rows of the summary table
+knitr::kable(head(state_summary, 50), caption = "Average County-level Income Statistics (Lowest 50)")
+```
+
+
+Frequency Table of Two Categorical Variables
+```{r}
+# Frequency table of county_state and year with average median_monthly_rent_cost
+state_year_rent_table <- census_data_sample |>
+  group_by(new_county_state, year) |>
+  summarize(
+    avg_median_rent = round(mean(median_monthly_rent_cost, na.rm = TRUE), 0)
+  ) |>
+  ungroup() |>
+  select(`County, State` = new_county_state, Year = year, `Rent` = avg_median_rent) |>
+  arrange(desc(Rent)) |>
+  mutate(Rent = dollar(Rent))
+
+# Display the first 50 rows of the frequency table
+knitr::kable(head(state_year_rent_table, 50), caption = "Frequency Table of County, Year and Average Median Rent \n(Top 50)")
+```
+
+
+Data Visualizations
+Visualization 1: Lowest Average Population 
+```{r}
+# Filter for the 10 counties with the lowest average populations over the years
+lowest_10_population_counties <- census_data_sample |>
+  group_by(new_county_state) |>
+  summarize(avg_population = mean(population, na.rm = TRUE)) |>
+  top_n(-10, avg_population)
+
+# Filter the original data to include only these counties
+lowest_10_population_data <- census_data_sample |>
+  filter(new_county_state %in% lowest_10_population_counties$new_county_state)
+
+# Summarize the average population for each county
+lowest_10_population_summary <- lowest_10_population_data |>
+  group_by(new_county_state) |>
+  summarize(avg_population = mean(population, na.rm = TRUE))
+
+# Create a horizontal bar chart
+ggplot(lowest_10_population_summary, aes(x = reorder(new_county_state, avg_population), y = avg_population)) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "black") +
+  coord_flip() +
+  labs(title = "10 Counties with the \nLowest Average Population", x = "County", y = "Population",
+       caption = "Source: Census Data Sample") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  )
+```
+
+
+Visualization 2: Median Income Distribution
+```{r}
+# Filter for the 10 counties with the highest median incomes
+top_10_income_counties <- census_data |>
+  group_by(new_county_state) |>
+  summarize(median_income = mean(median_income, na.rm = TRUE)) |>
+  top_n(10, median_income)
+
+# Filter the original data to include only these counties
+top_10_income_data <- census_data |>
+  filter(new_county_state %in% top_10_income_counties$new_county_state)
+
+# Median income distribution by top 10 counties using census data
+ggplot(top_10_income_data, aes(x = new_county_state, y = round(median_income, 0))) +
+  geom_boxplot(fill = "yellow", color = "black") +
+  scale_y_continuous(labels = dollar_format(prefix = "$", suffix = "", big.mark = ","), limits = c(80000, 160000), breaks = seq(0, 160000, by = 20000)) +
+  labs(
+    title = "Median Income Distribution in the \n(Top 10 Counties)",
+    x = "County",
+    y = "Income",
+    caption = "Source: Census Data") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  ) +
+  coord_flip()
+```
+
+Visualization 3: Population of Females by Top 10 States
+```{r}
+# Filter for the 10 states with the highest average female population
+top_10_female_population_states <- census_data |>
+  group_by(new_county_state) |>
+  summarize(avg_prop_female = mean(prop_female, na.rm = TRUE)) |>
+  top_n(10, avg_prop_female)
+
+# Filter the original data to include only these states
+top_10_female_population_data <- census_data |>
+  filter(new_county_state %in% top_10_female_population_states$new_county_state)
+
+# Create a heatmap of the proportion of females by top 10 states using sample data
+ggplot(top_10_female_population_data, aes(x = new_county_state, y = year, fill = round(prop_female * 100, 0))) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "darkblue", name = "Proportion of Females (%)") +
+  labs(
+    title = "Population of Females by Top 10 States",
+    x = "State",
+    y = "Year",
+    caption = "Source: Census Data"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 6),
+    plot.title = element_text(size = 10),
+    plot.caption = element_text(size = 8)
+  )
+```
+
+*Interpretation of the data:* We expect that in Norton City, Virginia, in the year 2014, the population of females reached 63%, making it the highest among the top 10 states with the highest average female population. This suggests that you would most likely find a bride in Norton City, Virginia, during that year based on the highest female population proportion.
+
+
+Population of Males by Top 10 States
+```{r}
+# Filter for the 10 states with the highest average male population
+top_10_male_population_states <- census_data |>
+  group_by(new_county_state) |>
+  summarize(avg_prop_male = mean(prop_male, na.rm = TRUE)) |>
+  top_n(10, avg_prop_male)
+
+# Filter the original data to include only these states
+top_10_male_population_data <- census_data |>
+  filter(new_county_state %in% top_10_male_population_states$new_county_state)
+
+# Create a heatmap of the proportion of males by top 10 states using sample data
+ggplot(top_10_male_population_data, aes(x = new_county_state, y = year, fill = round(prop_male * 100, 0))) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "darkblue", name = "Proportion of Males (%)") +
+ 
+  labs(title = "Population of Males by Top 10 States ", x = "State", y = "Year",
+caption = "Source: Cenus Data") +
+    theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 6),
+    plot.title = element_text(size = 10),
+    plot.caption = element_text(size = 8)
+  )
+```
+
+*Interpretation of the data:* In 2017, Forest, Pennsylvania had the highest population of males, reaching up to 80%. This makes it the state and year where you would most likely find a husband based on the highest male population.
+
+
+Visualization 4: Population in Poverty Trend
+```{r}
+lowest_10_poverty_counties <- census_data_sample |>
+  group_by(new_county_state) |>
+  summarize(avg_prop_poverty = mean(prop_poverty, na.rm = TRUE)) |>
+  top_n(-10, avg_prop_poverty)
+
+# Filter the original data to include only these counties
+lowest_10_poverty_data <- census_data_sample |>
+  filter(new_county_state %in% lowest_10_poverty_counties$new_county_state)
+
+# Plot the trend of poverty rates over time for the lowest 10 counties
+ggplot(lowest_10_poverty_data, aes(x = year, y = prop_poverty * 100, color = new_county_state, group = new_county_state)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = function(x) paste0(x, "%")) +
+  labs(
+    title = "Trend of Poverty Rates Over Time for the \n10 Counties with the Lowest Average Poverty Rates",
+    x = "Year",
+    y = "Population in Poverty",
+    color = "County",
+    caption = "Source: Census Data Sample"
+  )+
+  theme(axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  )
+```
+
+
+Visualization 5: Interactive comparison of Median income level with Median Rent and Mortgage Costs
+```{r}
+# Convert 'year' to numeric
+census_data <- census_data |> mutate(year = as.numeric(year))
+
+# Summary of median income, rent cost, and home cost
+summary_data <- census_data |>
+  group_by(year) |>
+  summarise(
+     mean_income = round(mean(median_income, na.rm = TRUE), 2),
+    mean_rent_cost = round(mean(median_monthly_rent_cost, na.rm = TRUE), 2),
+    mean_home_cost = round(mean(median_monthly_home_cost, na.rm = TRUE), 2)
+  )
+
+# Melt the data for faceting
+summary_data_long <- summary_data |>
+  pivot_longer(cols = c(mean_income, mean_rent_cost, mean_home_cost),
+               names_to = "variable",
+               values_to = "value")
+
+# Recode the variable names
+summary_data_long <- summary_data_long |>
+  mutate(variable = recode(variable,
+                           mean_income = "Income",
+                           mean_rent_cost = "Rent",
+                           mean_home_cost = "Mortgage"))
+
+# Plot the trends
+comparison_plot <- ggplot(summary_data_long, aes(x = year, y = value, color = variable)) +
+  geom_line(size = 1.2) +
+  scale_y_continuous(labels = dollar_format(prefix = "$", suffix = "", big.mark = ",", accuracy = 0.01)) +
+   facet_wrap(~ variable, scales = "free_y", ncol = 1) +
+  labs(
+    title = 'Comparison of Income, Rent and Mortgage Cost \n(2009-2021)',
+    x = 'Year',
+    y = 'Amount',
+    caption = "Data Source: United States Census Data",
+    color = "Variable"
+  )
+# Convert ggplot to plotly
+ggplotly(comparison_plot)
+```
+
+Beeswarm Plot
+```{r}
+# Filter counties with median income between 120,000 and 160,000
+income_filtered <- census_data|>
+  filter(median_income >= 120000 & median_income <= 160000)
+
+# beeswarm plot
+ggplot(income_filtered, aes(x = reorder(new_county_state, -median_income), y = median_income)) +
+  geom_quasirandom(alpha = 0.6, color = "blue") +
+  labs(title = "Beeswarm Plot of Median Income by County\n(120,000 and 160,000)",
+       x = "County",
+       y = "Income",
+caption = "Source: Cenus Data") +
+  scale_y_continuous(labels = dollar_format(prefix = "$", suffix = "", big.mark = ","), breaks = seq(120000, 160000, by = 15000)) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  ) +
+  guides(color=guide_legend(title="County"))
+```
+
+
+
+Permutation Testing
+```{r}
+# Permutation test for difference in median income between two counties
+county1 <- "Antrim County, Michigan"
+county2 <- "Wayne County, Michigan"
+
+# Define the function to compute income difference
+income_diff <- function(data, county1, county2) {
+  mean(data[data$county_state == county1, ]$median_income, na.rm = TRUE) - 
+  mean(data[data$county_state == county2, ]$median_income, na.rm = TRUE)
+}
+
+# Calculate the observed difference
+observed_diff <- income_diff(census_data, county1, county2)
+
+# Generate permuted differences
+permuted_diffs <- replicate(1000, {
+  permuted_data <- census_data
+  permuted_data$county_state <- sample(permuted_data$county_state)
+  income_diff(permuted_data, county1, county2)
+})
+
+# Convert the permuted differences to a data frame
+permuted_diffs_df <- data.frame(permuted_diffs = permuted_diffs)
+
+# Plot the permuted differences
+ggplot(permuted_diffs_df, aes(x = permuted_diffs)) +
+  geom_histogram(binwidth = 500, fill = "blue", alpha = 0.7, color = "black") +
+  geom_vline(aes(xintercept = observed_diff), color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Permutation Test for Median Income Difference", x = "Income Difference", y = "Frequency",
+caption = "Source: Cenus Data") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  ) 
+```
+
+Bootstrap
+```{r}
+# Set seed for reproducibility
+set.seed(1971)
+
+# Number of bootstrap samples
+B <- 1000
+
+# Instantiating matrix for bootstrap samples
+bootstrap_samples <- matrix(NA, nrow = nrow(census_data_sample), ncol = B)
+
+# Sampling with replacement B times
+for (b in 1:B) {
+  bootstrap_samples[, b] <- census_data_sample |>
+    slice_sample(prop = 1, replace = TRUE) |>
+    dplyr::pull(median_income)
+}
+
+# Calculate bootstrap medians
+bootstrap_medians <- apply(bootstrap_samples, 2, median, na.rm = TRUE)
+
+# Calculate bootstrap confidence interval
+boot_ci <- quantile(bootstrap_medians, probs = c(0.025, 0.975))
+
+# Create a histogram of the bootstrap medians
+ggplot(data.frame(medians = bootstrap_medians), aes(x = round(medians, 0))) +
+  geom_histogram(binwidth = 500) +
+  geom_vline(aes(xintercept = round(boot_ci[1], 0)), color = "red") +
+  geom_vline(aes(xintercept = round(boot_ci[2], 0)), color = "red") +
+  labs(
+    title = "Bootstrap Confidence Interval for Median Income",
+    x = "Income",
+    y = "Frequency",
+    caption = "Source: Census Data Sample"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7)
+  )
+```
+
+Data Dictionary
+```{r}
+# Display data dictionary
+data_dictionary <- tibble(
+  variable = c("geoid", "county_state", "year", "population", "median_income", 
+               "median_monthly_rent_cost", "median_monthly_home_cost", "prop_female", 
+               "prop_male", "prop_poverty"),
+  description = c("Geographic region ID", "Geographic region", "Year", "Population", 
+                  "Median income in dollars", "Median monthly housing costs for homeowners in dollars", 
+                  "Median monthly rent costs for renters in dollars", "Proportion of people who are female", 
+                  "Proportion of people who are male", "Proportion of people living in poverty")
+)
+
+knitr::kable(data_dictionary, caption = "Data Dictionary for Census Data")
+```
+
+
+
+Extra Credit
+Population Trends
+```{r}
+# Filter data for a sample county
+sample_county <- census_data |> dplyr::filter(new_county_state == 'Autauga, Alabama')
+
+# Check the structure of sample_county to ensure it's correct
+str(sample_county)
+
+# Plot population trend
+plot <- ggplot(sample_county, aes(x = year, y = population)) +
+  geom_line(size = 1.2, color = "blue") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = 'Population Trend in Autauga County, Alabama',
+    x = 'Year',
+    y = 'Population',
+    caption = "Data Source: Census Data"
+  )
+
+# Convert ggplot to plotly
+ggplotly(plot)
+```
+
+Median Income Summary
+```{r}
+# Convert 'year' back to numeric
+census_data <- census_data |> mutate(year = as.numeric(year))
+
+# Summary of median income
+income_summary <- census_data |>
+  group_by(year) |>
+  summarise(mean_income = mean(median_income, na.rm = TRUE))
+
+# Check the summary
+print(income_summary)
+
+# Plot median income trend
+income_plot <- ggplot(income_summary, aes(x = year, y = mean_income)) +
+  geom_line(size = 1.2, color="blue") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = 'Median Income Trend (2009-2021)',
+    x = 'Year',
+    y = 'Median Income (in USD)',
+    caption = "Data Source: United States Census Data"
+  )
+
+# Convert ggplot to plotly
+ggplotly(income_plot)
+```
+
+
+Median Monthly Rent Cost Summary
+```{r}
+# Summary of median monthly rent cost
+rent_summary <- census_data |>
+  group_by(year) |>
+  summarise(mean_rent = mean(median_monthly_rent_cost, na.rm = TRUE))
+
+# Plot median monthly rent cost trend
+rent_plot <- ggplot(rent_summary, aes(x = year, y = mean_rent)) +
+  geom_line(size = 1.2, color="blue") +
+  labs(
+    title = 'Median Monthly Rent Cost Trend (2009-2021)',
+    x = 'Year',
+    y = 'Monthly Rent',
+    caption = "Data Source: Census Data")
+
+# Convert ggplot to plotly
+    ggplotly(rent_plot)
+```
+
+Key Summary Table
+```{r}
+# Summary table of key statistics
+key_summary <- census_data |>
+  group_by(year) |>
+  summarise(
+    mean_population = mean(population, na.rm = TRUE),
+    mean_income = mean(median_income, na.rm = TRUE),
+    mean_rent = mean(median_monthly_rent_cost, na.rm = TRUE),
+    mean_home_cost = mean(median_monthly_home_cost, na.rm = TRUE)
+  ) |>
+  mutate(
+    mean_population = round(mean_population),
+    mean_income = round(mean_income),
+    mean_rent = round(mean_rent),
+    mean_home_cost = round(mean_home_cost)
+  )
+
+# Display the summary table
+datatable(key_summary, options = list(pageLength = 10)) |>
+  formatCurrency(columns = c('mean_income', 'mean_rent', 'mean_home_cost'), currency = '', interval = 3, mark = ',') |>
+  formatRound(columns = 'mean_population', interval = 3, mark = ',', digits = 0)
+```
+
+Key Findings:
+
+- Income Distribution: Higher-income counties tend to be located in more economically developed areas, while lower-income counties are often found in less developed regions.
+
+- Rent and Mortgage Trends: Rent and mortgage costs have generally increased over time, reflecting economic inflation and housing market trends.
+
+- Population Dynamics: Certain counties show significant gender imbalances, which could be due to various socio-economic factors.
+
+- Poverty Rates: Counties with the lowest poverty rates consistently show a decline, indicating economic improvements.
+
+The project offers a thorough analysis and visual representations that provide valuable insights into socio-economic trends across various counties in the United States during the period under examination.
+
