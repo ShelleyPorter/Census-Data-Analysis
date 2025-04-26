@@ -53,9 +53,10 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 </p>
 
 ---
-
-# # 🙌 Connect with Me!
+# 🙌 Connect with Me!
 
 🔗 [LinkedIn](https://www.linkedin.com/in/lashelleporter)  |  📧 [shellep@umich.edu](mailto:shellep@umich.edu)  |  🌎 Rockford, MI
 
 ---
+
+🚀 **Project Completed by LaShelle Porter** — July 2023
