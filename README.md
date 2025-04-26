@@ -13,30 +13,6 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 
 ---
 
-
-## 📚 Table of Contents
-- [Overview](#-overview)
-- [Project Structure](#-project-structure)
-- [Technologies Used](#-technologies-used)
-- [Features](#-features)
-- [Screenshots](#-screenshots)
----
-
-## 🐂 Project Structure
-
-```bash
-├── README.md
-├── Final Project S Porter.Rmd
-├── Final-Project-S-Porter.html
-├── Final Project S Porter.RData
-├── census_data_county_2009-2021.cvs
-├── assets/
-│   ├── screenshots/
-└── LICENSE
-```
-
----
-
 ## 🚀 Technologies Used
 
 - R Programming Language
@@ -80,7 +56,7 @@ This **Census Data Analysis** demonstrates advanced concepts in **R Programming*
 
 # 🔗 Connect
 
-- **GitHub:** [@your-username](https://github.com/ShelleyPorter)
+- **GitHub:** [@Shelley Porter](https://github.com/ShelleyPorter)
 - **LinkedIn:** [Shelley Porter](https://www.linkedin.com/in/lashelleporter/)
 
 ---
